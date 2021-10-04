@@ -31,7 +31,7 @@ class Stat:
         loaded_data = []
         for num, row in tqdm(enumerate(read_csv_as_dicts(path)), desc=f'data loading from {path}'):
             loaded_data.append({key: float(el) for key, el in row.items()})
-            if self.is_test and num == 99999:
+            if self.is_test and num == 499999:
                 break
         return loaded_data
 
