@@ -1,13 +1,11 @@
 from collections import defaultdict
 from random import seed, sample
-from typing import List, OrderedDict, DefaultDict, Tuple
+from typing import List, DefaultDict, Tuple
 
 from tqdm import tqdm
 from utilities import read_csv_as_dicts, write_dict_csv
 
 from data_plotter import Plotter
-from lgbm_model import train_and_evaluate_lgb
-from lgbm_model_regressor import train_and_evaluate_lgb_regressor
 from lstm_model import train_and_evaluate_lstm
 
 import pandas as pd
@@ -25,13 +23,14 @@ class Stat:
         self.is_test = is_test
         self.breath_ids = set()
         self.src_train = self.load_data(self.src_train_path)
-        self.src_test = self.load_data(self.src_test_path)
+        self.src_test = self.load_data(self.src_test_path, True)
 
-    def load_data(self, path: str):
+    def load_data(self, path: str, is_full_load: bool = False):
         loaded_data = []
         for num, row in tqdm(enumerate(read_csv_as_dicts(path)), desc=f'data loading from {path}'):
             loaded_data.append({key: float(el) for key, el in row.items()})
-            if self.is_test and num == 499999:
+            # if self.is_test and num == 499999 and not is_full_load:
+            if self.is_test and num == 999999:
                 break
         return loaded_data
 

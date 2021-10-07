@@ -79,7 +79,6 @@ def train_and_evaluate_lgb(train, test):
     # Create test array to store predictions
     test_predictions = np.zeros(test.shape[0])
     print('Create a KFold object')
-    kfold = KFold(n_splits=5, random_state=SEED, shuffle=True)
     gkfold = GroupKFold(n_splits=5)
     # Iterate through each fold
     for fold, (trn_ind, val_ind) in enumerate(gkfold.split(train, y, groups=train['breath_id'])):
