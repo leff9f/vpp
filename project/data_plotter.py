@@ -2,7 +2,7 @@ from typing import Dict, Any, DefaultDict, List, Tuple
 
 from bokeh.layouts import grid
 from bokeh.models import DatetimeTickFormatter, ColumnDataSource
-from bokeh.palettes import Colorblind8
+from bokeh.palettes import Paired12
 from bokeh.plotting import figure, curdoc, Figure, save
 from bokeh.transform import cumsum
 
@@ -27,7 +27,7 @@ class Plotter:
         for i, (source_name, fig_source) in enumerate(data.items()):
             # add a line renderer with legend and line thickness to the plot
             p.line(fig_source[0], fig_source[1], legend_label=source_name, alpha=0.7,
-                   line_color=(Colorblind8[i]), line_width=2)
+                   line_color=(Paired12[i]), line_width=2)
         self.style(p, name, 'top_left')
         return p
 
@@ -45,7 +45,7 @@ class Plotter:
         for i, (source_name, fig_source) in enumerate(data.items()):
             # add a line renderer with legend and line thickness to the plot
             p.line('x', 'y', source=fig_source, legend_label=source_name, alpha=0.7,
-                   line_color=(Colorblind8[i]), line_width=2)
+                   line_color=(Paired12[i]), line_width=2)
         self.style(p, name, 'top_left')
         return p
 

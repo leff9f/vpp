@@ -5,10 +5,12 @@ import numpy as np
 from sklearn.metrics import mean_absolute_error
 
 
-def read_csv_as_dicts(path, delimiter=','):
+def read_csv_as_dicts(path, nrows=-1, delimiter=','):
     with open(path) as f:
         lines = csv.DictReader(f, delimiter=delimiter)
-        for row in lines:
+        for num, row in enumerate(lines):
+            if num == nrows:
+                break
             yield row
 
 

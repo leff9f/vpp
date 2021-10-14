@@ -30,47 +30,6 @@ PARAMS = {
 }
 
 
-# def train_and_evaluate_lgb(train, test, params):
-#     print('data prepare')
-#     features = [col for col in train.columns if col not in {'id', 'pressure', 'breath_id'}]
-#     y = train['pressure']
-#     oof_predictions = np.zeros(train.shape[0])
-#     # Create test array to store predictions
-#     test_predictions = np.zeros(test.shape[0])
-#     print('Create a KFold object')
-#     kfold = KFold(n_splits=5, random_state=SEED, shuffle=True)
-#     # Iterate through each fold
-#     for fold, (trn_ind, val_ind) in enumerate(kfold.split(train)):
-#         print(f'Training fold {fold + 1}')
-#         x_train, x_val = train[features].iloc[trn_ind], train[features].iloc[val_ind]
-#         y_train, y_val = y.iloc[trn_ind], y.iloc[val_ind]
-#         # Root mean squared percentage error weights
-#         train_weights = 1 / np.square(y_train)
-#         val_weights = 1 / np.square(y_val)
-#         train_dataset = lgb.Dataset(x_train[features], y_train, weight=train_weights)
-#         val_dataset = lgb.Dataset(x_val[features], y_val, weight=val_weights)
-#         model = lgb.train(params=params,
-#                           num_boost_round=1400,
-#                           train_set=train_dataset,
-#                           valid_sets=[train_dataset, val_dataset],
-#                           verbose_eval=250,
-#                           early_stopping_rounds=50,
-#                           feval=feval_mae)
-#         # Add predictions to the out of folds array
-#         oof_predictions[val_ind] = model.predict(x_val[features])
-#         # Predict the test set
-#         test_predictions += model.predict(test[features]) / 5
-#     mae_score = mean_absolute_error(y, oof_predictions)
-#     print(f'Our out of folds MAE is {mae_score}')
-#
-#     print('Plotting feature importances...')
-#     ax = lgb.plot_importance(model, max_num_features=20)
-#     plt.savefig('feature_importance.png')
-#
-#     # Return test predictions
-#     return test_predictions
-
-
 def train_and_evaluate_lgb(train, test):
     print('data prepare')
     features = [col for col in train.columns if col not in {'id', 'pressure', 'breath_id'}]
@@ -91,11 +50,11 @@ def train_and_evaluate_lgb(train, test):
         train_dataset = lgb.Dataset(x_train[features], y_train, weight=train_weights)
         val_dataset = lgb.Dataset(x_val[features], y_val, weight=val_weights)
         model = lgb.train(params=PARAMS,
-                          num_boost_round=1600,
+                          num_boost_round=2300,
                           train_set=train_dataset,
                           valid_sets=[train_dataset, val_dataset],
-                          verbose_eval=50,
-                          early_stopping_rounds=20,
+                          verbose_eval=100,
+                          early_stopping_rounds=25,
                           feval=feval_mae)
         # Add predictions to the out of folds array
         oof_predictions[val_ind] = model.predict(x_val[features])
@@ -109,7 +68,7 @@ def train_and_evaluate_lgb(train, test):
     plt.savefig('feature_importance.png')
 
     # Return test predictions
-    return test_predictions
+    return test_predictions[::-1]
 
 
 
