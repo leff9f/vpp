@@ -1,7 +1,4 @@
-from utilities import write_dict_csv
-
-from lstm_model import train_and_evaluate_lstm
-from lgbm_model_regressor import train_and_evaluate_lgb_regressor
+from vanilla_lstm import train_and_evaluate_v_lstm
 import pandas as pd
 import numpy as np
 
@@ -42,12 +39,8 @@ def features_prepare(train, test, is_load_features: bool = False, is_write_new_f
 if __name__ == '__main__':
     src_train_path = '../input/train.csv'
     src_test_path = '../input/test.csv'
-    nrows = 500000  # if need some small test set, set int number, for all data use None
+    nrows = None  # if need some small test set, set int number, for all data use None
     src_train = pd.read_csv(src_train_path, nrows=nrows)
     src_test = pd.read_csv(src_test_path, nrows=nrows)
     SEED0 = 159
-    submission = train_and_evaluate_lgb_regressor(generate_features(src_train), generate_features(src_test))
-    # submission = train_and_evaluate_lstm(generate_features(src_train), generate_features(src_test))
-    write_dict_csv('submission.csv', [{'id': num, 'pressure': p} for num, p in enumerate(submission, start=1)],
-                   fieldnames=['id', 'pressure'])
-
+    train_and_evaluate_v_lstm(src_train, src_test)

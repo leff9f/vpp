@@ -5,8 +5,8 @@ import numpy as np
 def generate_features(df: pd.DataFrame) -> pd.DataFrame:
     df['area'] = df['time_step'] * df['u_in']
     df['area'] = df.groupby('breath_id')['area'].cumsum()
-    df['cross'] = df['u_in'] * df['u_out']
-    df['cross2'] = df['time_step'] * df['u_out']
+    df['cross'] = df['u_in'] * df['u_out']  # нужные нам данные где u_out == 0, лишнее
+    df['cross2'] = df['time_step'] * df['u_out']  # нужные нам данные где u_out == 0, лишнее
 
     df['u_in_cumsum'] = (df['u_in']).groupby(df['breath_id']).cumsum()
     df['one'] = 1

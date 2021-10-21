@@ -1,10 +1,13 @@
 import pandas as pd
 import lightgbm as lgb
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import KFold
 from sklearn.metrics import mean_absolute_error
 from utilities import write_dict_csv, feval_mae
+from sklearn.preprocessing import RobustScaler
+from features_upd_v3 import generate_features
 import matplotlib.pyplot as plt
 import numpy as np
+import gc
 
 PARAMS = {
     'boosting_type': 'gbdt',
@@ -23,37 +26,67 @@ PARAMS = {
 }
 
 
+def data_prepare(train, test):
+    # get y, before scaling
+    y = train['pressure'].to_numpy()
+
+    # generate features
+    train = generate_features(train)
+    test = generate_features(test)
+
+    # # drop unused features
+    train.drop(['pressure', 'id', 'breath_id'], axis=1, inplace=True)
+    test.drop(['id', 'breath_id'], axis=1, inplace=True)
+    # train.drop(['pressure', 'id', 'breath_id', 'one', 'count', 'breath_id_lag', 'breath_id_lag2', 'breath_id_lagsame',
+    #             'breath_id_lag2same', 'u_out_lag2'], axis=1, inplace=True)
+    # test.drop(['id', 'breath_id', 'one', 'count', 'breath_id_lag', 'breath_id_lag2', 'breath_id_lagsame',
+    #                   'breath_id_lag2same', 'u_out_lag2'], axis=1)
+
+    # features
+    features = train.columns
+
+    # Scale features
+    rb = RobustScaler()
+    rb.fit(train)
+    train = rb.transform(train)
+    test = rb.transform(test)
+    gc.collect()
+    return train, test, y, features
+
+
 def train_and_evaluate_lgb_regressor(train, test):
-    print('data prepare')
-    features = [col for col in train.columns if col not in {'id', 'pressure', 'breath_id'}]
-    X = train[features]
-    y = train['pressure']
+    train, test, y, features = data_prepare(train, test)
     print('Create a KFold object')
-    folds = GroupKFold(n_splits=5)
+    kf = KFold(n_splits=5, shuffle=True, random_state=159)
     # Iterate through each fold
-    test_predictions = np.zeros(test.shape[0])
+    test_preds = []
     scores = []
     feature_importance = pd.DataFrame()
-    for fold_n, (trn_ind, val_ind) in enumerate(folds.split(train, y, groups=train['breath_id'])):
+    for fold_n, (train_idx, test_idx) in enumerate(kf.split(train, y)):
         print(f'{"*"*20}Training fold {fold_n + 1}{"*"*20}')
-        x_train, x_val = X.iloc[trn_ind], X.iloc[val_ind]
-        y_train, y_val = y.iloc[trn_ind], y.iloc[val_ind]
+        X_train, X_valid = train[train_idx], train[test_idx]
+        y_train, y_valid = y[train_idx], y[test_idx]
+
         model = lgb.LGBMRegressor(**PARAMS, n_estimators=2300)
-        model.fit(x_train, y_train,
-                  eval_set=[(x_train, y_train), (x_val, y_val)],
+        model.fit(X_train, y_train,
+                  eval_set=[(X_train, y_train), (X_valid, y_valid)],
                   verbose=100,
                   early_stopping_rounds=25)
-        score = mean_absolute_error(y_val, model.predict(x_val))
-
-        test_predictions += model.predict(test[features]) / 5
+        score = mean_absolute_error(y_valid, model.predict(X_valid))
         scores.append(score)
+
+        test_preds.append(model.predict(test).squeeze().reshape(-1, 1).squeeze())
 
         fold_importance = pd.DataFrame()
         fold_importance["feature"] = features
         fold_importance["importance"] = model.feature_importances_
         fold_importance["fold"] = fold_n + 1
         feature_importance = pd.concat([feature_importance, fold_importance], axis=0)
-        print(f'{"*"*20}mae score: {np.mean(score)}{"*"*20}')
+
+        del X_train, X_valid, y_train, y_valid
+        gc.collect()
+
+        print(f'{"*" * 20}mae score: {np.mean(score)}{"*" * 20}')
 
     cv_mean_score = np.mean(scores)
     cv_std_score = np.std(scores)
@@ -74,5 +107,16 @@ def train_and_evaluate_lgb_regressor(train, test):
 
     write_dict_csv('params_and_features_w_cv_score.csv', [params], list(params.keys()), mode='a')
 
-    # Return test predictions
-    return test_predictions
+    # Mean submission
+    submission = pd.read_csv('../input/sample_submission.csv')
+    submission["pressure"] = sum(test_preds) / 5  # test_preds[1]
+    submission.to_csv('submission_mean_v2.csv', index=False)
+
+    # Median submission
+    submission["pressure"] = np.median(np.vstack(test_preds), axis=0)
+
+    # Round predictions (Post Preprocessing)
+    train = pd.read_csv('../input/train.csv')
+    pressure_unique = np.array(sorted(train['pressure'].unique()))
+    submission['pressure'] = submission['pressure'].map(lambda x: pressure_unique[np.abs(pressure_unique - x).argmin()])
+    submission.to_csv('submission_post_preprocessing_v2.csv', index=False)
